@@ -17,6 +17,8 @@ Samba and ESPHome addons installed on Home Assistant machine.
 Ability to run a docker container with Python 3.11 on the same network. Note: Appears to not be compatible with Alpine-based containers currently, due to libraries not being supported.
 
 ### ESPMeter Process Flow
+The main challenge in the project has been that ESPHome does not have an easy way to only trigger capturing an image on the camera at certain points in time. It's either a video or photo stream. This is inefficient in terms of energy, but also leads to unnecessary wear on the hardware, especially the LEDS used to ensure good lighting. As a result there is a strong integration with a home assistant automation to manage the capture of photos and sending the ESPHome unit to deep sleep.
+
 The process flow is currently as follows:
 
 1) Simple ESP32Cam created in ESPHome unit wakes up. Switches on lights for camera and after a short moment to ensure that everything is powered on, sends a message to Home assistant statig it is ready through a template switch.
@@ -33,11 +35,15 @@ The process flow is currently as follows:
 4) The ESPMeter script uses a samba client to retrieve the image and proceeds to extract the number from the image.
 5) Afterwards a copy of the final result is stored back on the home assistant server. This is available for trouble shooting issues
 6) The result along with confidence is sent to Home assistant. The raw value and confidence is always sent for debugging purposes. If confidence is low, a "final result" is not given, to avoid the data being all over the place in the statistics.
-7) the ESPMeter script goes back to listening mode, waiting for the next ready message by MQTT.
+7) the ESPMeter script goes to sleep, waking up once a minute to check for a ready message by MQTT.
 
 ### Setup
 The file setup_ocr_values.py can be run to quickly check the file loading and adjust the Region of Interest which is the part of the image parsed to EasyOCR for digit extraction.
 The script should run in a venv with the requirement.txt dependencies installed. A subfolder /data with two subfolders /raw and /final are needed to save images. Images stored here are currently not automatically purged, so over time this needs to be done manually. They are retained for debugging purposes for now. The image files on the home assistant server are overwritten by new images so storage constraints are not an issue there.
 
+### Would be nice to have in future:
+Refactor to make a setup file with all variables
+Make a simple webbased tool useful for finding the correct values for region of interest size and and brightness/contrast settings.
+Premade dockerfile for easy setup, Home Assistant addon container, or other more elegant solution.
 
    
