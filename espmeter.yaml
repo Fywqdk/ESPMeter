@@ -1,0 +1,133 @@
+esphome:
+  name: espmeter
+  friendly_name: ESPMeter
+  on_boot:
+    priority: -200
+    then:
+      - switch.turn_on: Cam_light
+      - delay: 2s
+      - switch.template.publish:
+          id: rdy_state
+          state: ON
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+  level: DEBUG
+  baud_rate: 115200
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret espmeter_api_key
+
+ota:
+  - platform: esphome
+    password: !secret espmeter_ota_key
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+#  use_address: [Set used IP here]
+
+#  manual_ip:
+#    static_ip: [Static IP]
+#    gateway: [Static IP Gateway]
+#    subnet: [Static IP subnet]
+
+web_server:
+  port: 80
+  include_internal: true
+  local: true
+
+time:
+  - platform: homeassistant
+
+sensor:
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    update_interval: 60s
+
+# Lights for the camera. Adjust if using internal flash LED or other sources.
+light:
+  - platform: neopixelbus
+    pin: GPIO12
+    num_leds: 3
+    variant: sk6812
+    id: backlight_leds
+    name: "SK6812 Backlight"
+    method:
+      type: esp32_i2s
+    type: GRBW
+
+switch:
+  - platform: template # This is also related to the lights, thus depends on hardware setup
+    id: Cam_light
+    name: Cam light
+    turn_on_action:
+      - light.turn_on:
+          id: backlight_leds
+          color_brightness: 50%
+          red: 50%
+          green: 50%
+          blue: 50%
+          white: 80%
+    turn_off_action:
+      - light.turn_off: backlight_leds
+      
+  - platform: template
+    id: sleep_switch
+    name: "Sleep Switch"
+    turn_on_action:
+      - switch.turn_off: rdy_state
+      - delay: 500ms
+      - switch.turn_off: Cam_light
+      - delay: 1s
+      - deep_sleep.enter:
+          sleep_duration: 300s
+    restore_mode: ALWAYS_OFF
+  
+  - platform: template
+    id: rdy_state
+    name: "Ready State"
+    optimistic: True
+    restore_mode: ALWAYS_OFF
+
+esp32_camera: # This should be universal for all the standard ESP32Cam units, but check the documentation of your unit.
+  id: cam
+  external_clock:
+    pin: GPIO0
+    frequency: 20MHz
+  i2c_pins:
+    sda: GPIO26
+    scl: GPIO27
+  data_pins: [GPIO5, GPIO18, GPIO19, GPIO21, GPIO36, GPIO39, GPIO34, GPIO35]
+  vsync_pin: GPIO25
+  href_pin: GPIO23
+  pixel_clock_pin: GPIO22
+  power_down_pin: GPIO32
+  max_framerate: 1 fps
+  idle_framerate: 0 fps
+
+  # Image settings
+  name: espmeter_raw
+  resolution: 800X600
+  jpeg_quality: 10
+  aec_mode: MANUAL
+  aec_value: 1200
+  aec2: True
+  ae_level: 2
+  contrast: 2
+  brightness: -2
+  special_effect: grayscale
+  
+        
+esp32_camera_web_server:
+  - port: 8081
+    mode: SNAPSHOT
+
+deep_sleep:
