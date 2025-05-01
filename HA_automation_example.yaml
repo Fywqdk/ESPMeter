@@ -1,0 +1,65 @@
+alias: ESPMeter image
+description: ""
+triggers:
+  - trigger: state
+    entity_id:
+      - switch.espmeter_ready_state
+    from: null
+    to: "on"
+conditions: []
+actions:
+  - action: switch.turn_on
+    metadata: {}
+    data: {}
+    target:
+      entity_id: switch.espmeter_cam_light
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 3
+      milliseconds: 0
+  - action: camera.snapshot
+    metadata: {}
+    data:
+      filename: www/espmeter/espmeter_raw.jpg
+    target:
+      device_id: [ESP32Cam unit from ESPHome]
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 3
+      milliseconds: 0
+  - action: camera.snapshot
+    metadata: {}
+    data:
+      filename: www/espmeter/espmeter_raw.jpg
+    target:
+      device_id: [ESP32Cam unit from ESPHome]
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 10
+      milliseconds: 0
+  - action: mqtt.publish
+    metadata: {}
+    data:
+      qos: "2"
+      topic: espmeter
+      payload: Ready for OCR
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 5
+      milliseconds: 0
+  - action: mqtt.publish
+    metadata: {}
+    data:
+      qos: "1"
+      retain: false
+      topic: espmeter
+      payload: Not Ready
+  - type: turn_on
+    device_id: [ESP32Cam unit from ESPHome]
+    entity_id: [ESP32Cam Sleep Switch from ESPHome]
+    domain: switch
+mode: single
